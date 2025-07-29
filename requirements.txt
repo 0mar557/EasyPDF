@@ -1,1 +1,7 @@
-Flaskgunicornpdf2docxpdf2imagepytesseractpython-docxPyMuPDF
+Flask
+gunicorn
+pdf2docx
+pdf2image
+pytesseract
+python-docx
+PyMuPDF
