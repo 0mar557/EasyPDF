@@ -1,4 +1,4 @@
-from flask import Flask, request, send_file
+from flask import Flask, request, send_file, render_template
 from pdf2docx import Converter
 from pdf2image import convert_from_path
 import pytesseract
@@ -15,6 +15,10 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 POPPLER_PATH = r"C:\poppler\Library\bin"
 TESSERACT_PATH = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
+
+@app.route('/')
+def home():
+    return render_template('index.html')
 
 
 @app.route('/convert/pdf-to-word', methods=['POST'])
