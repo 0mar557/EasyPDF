@@ -12,10 +12,6 @@ app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-POPPLER_PATH = r"C:\poppler\Library\bin"
-TESSERACT_PATH = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
-
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -53,7 +49,8 @@ def convert_pdf_to_word_ocr():
     file.save(input_path)
 
     try:
-        images = convert_from_path(input_path, poppler_path=POPPLER_PATH)
+        # PAS besoin de poppler_path ici : il est dans PATH via Docker
+        images = convert_from_path(input_path)
         doc = Document()
 
         for i, image in enumerate(images):
@@ -83,11 +80,9 @@ def convert_pdf_to_pdf_ocr():
     file.save(input_path)
 
     try:
-        # Étape 1 : PDF → images
-        images = convert_from_path(input_path, poppler_path=POPPLER_PATH)
+        images = convert_from_path(input_path)
         page_paths = []
 
-        # Étape 2 : OCR sur chaque page (format PDF avec layout)
         for i, image in enumerate(images):
             pdf_bytes = pytesseract.image_to_pdf_or_hocr(image, lang='eng+fra', extension='pdf')
             page_path = os.path.join(temp_folder, f'page_{i + 1}.pdf')
@@ -95,7 +90,6 @@ def convert_pdf_to_pdf_ocr():
                 f.write(pdf_bytes)
             page_paths.append(page_path)
 
-        # Étape 3 : Fusion de toutes les pages OCR en un seul PDF
         final_pdf = fitz.open()
         for path in page_paths:
             with fitz.open(path) as page_doc:
@@ -108,5 +102,6 @@ def convert_pdf_to_pdf_ocr():
         return f"Erreur OCR avec mise en page : {str(e)}", 500
 
 
-if __name__ == '__main__':
-    app.run(debug=True)
+# ⚠️ Ne pas exécuter app.run() sur Railway, c'est gunicorn qui démarre l'app
+# if __name__ == '__main__':
+#     app.run(debug=True)

@@ -1,27 +1,29 @@
-# Étape 1 : Choisir une image Debian slim + Python
 FROM python:3.11-slim
 
-# Étape 2 : Installer les dépendances système (Poppler + Tesseract)
+# Installer les dépendances système
 RUN apt-get update && apt-get install -y \
     poppler-utils \
     tesseract-ocr \
     tesseract-ocr-fra \
     tesseract-ocr-eng \
-    libgl1 \
-    && apt-get clean \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Étape 3 : Définir le dossier de travail
+# Créer et définir le dossier de travail
 WORKDIR /app
 
-# Étape 4 : Copier les fichiers
-COPY . .
-
-# Étape 5 : Installer les dépendances Python
+# Copier les fichiers requis
+COPY requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Étape 6 : Exposer le port utilisé par Flask/Gunicorn
-EXPOSE 8080
+# Copier le reste des fichiers
+COPY . .
 
-# Étape 7 : Démarrer l’application avec Gunicorn
-CMD ["gunicorn", "-b", "0.0.0.0:8080", "app:app"]
+# Spécifier le port 8080 pour Railway
+ENV PORT=8080
+
+# Lancer avec gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]
