@@ -27,6 +27,16 @@ def pdf_to_word_ocr_page():
 def pdf_to_pdf_ocr_page():
     return render_template('pdf_to_pdf_ocr.html')
 
+@app.route('/pdf-editor')
+def pdf_editor():
+    return render_template('pdf_editor.html')  # page avec l’éditeur complet
+
+# Si tu veux gérer une future route pour télécharger les PDF modifiés :
+@app.route('/download', methods=['POST'])
+def download_pdf():
+    # À compléter si tu veux permettre un téléchargement depuis le client
+    # Par exemple, tu peux recevoir un blob, le sauvegarder ici, et le retourner avec `send_file`
+    return "Fonction d'exportation PDF à implémenter"
 
 # ==== Traitement ====
 
