@@ -1,225 +1,71 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>Modifier un PDF – EasyPDF</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <!-- PDF.js + PDF-lib -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+  <title>Test Editeur PDF</title>
   <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
-
-  <!-- Bootstrap + Icons -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f4f4f8;
-      overflow: hidden;
-    }
-
-    .editor-container {
-      display: flex;
-      height: 100vh;
-    }
-
-    .toolbar {
-      width: 60px;
-      background: #2d2d30;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 15px 0;
-    }
-
-    .toolbar button {
-      background: none;
-      border: none;
-      color: white;
-      font-size: 18px;
-      margin: 10px 0;
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-
-    .toolbar button:hover {
-      transform: scale(1.2);
-    }
-
-    .pdf-viewer {
-      flex-grow: 1;
-      overflow: auto;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      position: relative;
-    }
-
-    #pdfCanvas {
-      max-width: 90%;
-      max-height: 90%;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-      border-radius: 8px;
-      background: white;
-    }
-
-    .sidebar {
-      width: 130px;
-      background: #eeeeee;
-      padding: 10px;
-      overflow-y: auto;
-    }
-
-    .thumbnail {
-      width: 100%;
-      margin-bottom: 10px;
-      border: 2px solid transparent;
-      cursor: pointer;
-    }
-
-    .thumbnail.selected {
-      border-color: #007bff;
-    }
-
-    .topbar {
-      position: absolute;
-      top: 10px;
-      right: 20px;
-      z-index: 10;
-    }
-
-    .topbar input[type="file"] {
-      display: none;
-    }
-
-    .topbar label {
-      background-color: #007bff;
-      color: white;
-      padding: 8px 15px;
-      border-radius: 6px;
-      margin-right: 10px;
-      cursor: pointer;
-    }
-
-    .topbar button {
-      background-color: #28a745;
-      color: white;
-      padding: 8px 15px;
-      border: none;
-      border-radius: 6px;
-    }
-
-    @media (max-width: 768px) {
-      .toolbar { width: 50px; }
-      .sidebar { width: 100px; }
-    }
-  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 </head>
 <body>
 
-<div class="editor-container">
-  <!-- Barre d'outils -->
-  <div class="toolbar">
-    <button title="Ajouter du texte"><i class="fas fa-font"></i></button>
-    <button title="Surligner"><i class="fas fa-highlighter"></i></button>
-    <button title="Dessiner"><i class="fas fa-pen"></i></button>
-  </div>
+  <h2>Test PDF brut</h2>
 
-  <!-- Zone PDF -->
-  <div class="pdf-viewer">
-    <div class="topbar">
-      <label for="uploadPDF"><i class="fas fa-upload"></i> Choisir un PDF</label>
-      <input type="file" id="uploadPDF" accept=".pdf">
-      <button id="exportBtn"><i class="fas fa-download"></i> Exporter</button>
-    </div>
-    <canvas id="pdfCanvas"></canvas>
-  </div>
+  <input type="file" id="uploadPDF" accept="application/pdf">
+  <button id="exportBtn">Exporter</button>
+  <br><br>
+  <canvas id="pdfCanvas"></canvas>
 
-  <!-- Miniatures -->
-  <div class="sidebar" id="thumbnailList">
-    <!-- Thumbnails dynamiques -->
-  </div>
-</div>
+  <script>
+    const canvas = document.getElementById('pdfCanvas');
+    const ctx = canvas.getContext('2d');
+    const uploadInput = document.getElementById('uploadPDF');
+    const exportBtn = document.getElementById('exportBtn');
 
-<script>
-  let pdfDoc = null;
-  let currentPage = 1;
-  let originalPdfBytes = null;
+    let pdfDoc = null;
+    let originalPdfBytes = null;
 
-  const canvas = document.getElementById('pdfCanvas');
-  const ctx = canvas.getContext('2d');
-  const thumbnailList = document.getElementById('thumbnailList');
+    uploadInput.addEventListener('change', async function () {
+      const file = this.files[0];
+      if (!file) return;
 
-  document.getElementById('uploadPDF').addEventListener('change', async function () {
-    const file = this.files[0];
-    if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async function (event) {
+        try {
+          originalPdfBytes = new Uint8Array(event.target.result); // correct: Uint8Array
+          const loadingTask = pdfjsLib.getDocument({ data: originalPdfBytes });
+          pdfDoc = await loadingTask.promise;
 
-    const fileReader = new FileReader();
-    fileReader.onload = async function () {
-      originalPdfBytes = new Uint8Array(this.result);
-      const loadingTask = await pdfjsLib.getDocument({ data: originalPdfBytes }).promise;
-      pdfDoc = loadingTask;
-      showPage(1);
-      generateThumbnails();
-    };
-    fileReader.readAsArrayBuffer(file);
-  });
-
-  async function showPage(num) {
-    currentPage = num;
-    const page = await pdfDoc.getPage(num);
-    const viewport = page.getViewport({ scale: 1.5 });
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-
-    await page.render({
-      canvasContext: ctx,
-      viewport: viewport
-    }).promise;
-
-    updateSelectedThumbnail(num);
-  }
-
-  function updateSelectedThumbnail(num) {
-    [...thumbnailList.children].forEach((thumb, index) => {
-      thumb.classList.toggle('selected', index + 1 === num);
+          const page = await pdfDoc.getPage(1);
+          const viewport = page.getViewport({ scale: 1.5 });
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          await page.render({ canvasContext: ctx, viewport }).promise;
+        } catch (err) {
+          alert("Erreur lors du chargement du PDF : " + err.message);
+        }
+      };
+      reader.readAsArrayBuffer(file); // <- important : pas readAsDataURL
     });
-  }
 
-  async function generateThumbnails() {
-    thumbnailList.innerHTML = '';
-    for (let i = 1; i <= pdfDoc.numPages; i++) {
-      const page = await pdfDoc.getPage(i);
-      const viewport = page.getViewport({ scale: 0.2 });
-      const thumbCanvas = document.createElement('canvas');
-      const context = thumbCanvas.getContext('2d');
-      thumbCanvas.width = viewport.width;
-      thumbCanvas.height = viewport.height;
+    exportBtn.addEventListener('click', async () => {
+      if (!originalPdfBytes) {
+        alert("Aucun PDF chargé !");
+        return;
+      }
 
-      await page.render({ canvasContext: context, viewport }).promise;
-      thumbCanvas.classList.add('thumbnail');
-      thumbCanvas.addEventListener('click', () => showPage(i));
-      thumbnailList.appendChild(thumbCanvas);
-    }
-  }
-
-  document.getElementById('exportBtn').addEventListener('click', async () => {
-    if (!originalPdfBytes) return alert("Aucun PDF chargé.");
-
-    const pdfDocLib = await PDFLib.PDFDocument.load(originalPdfBytes);
-    const pdfBytes = await pdfDocLib.save();
-
-    const blob = new Blob([pdfBytes], { type: "application/pdf" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "modified.pdf";
-    link.click();
-  });
-</script>
+      try {
+        const pdfDocLib = await PDFLib.PDFDocument.load(originalPdfBytes); // parse OK
+        const pdfBytes = await pdfDocLib.save(); // export
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'document_modifie.pdf';
+        a.click();
+      } catch (err) {
+        alert("Erreur lors de l'exportation : " + err.message);
+      }
+    });
+  </script>
 
 </body>
 </html>
