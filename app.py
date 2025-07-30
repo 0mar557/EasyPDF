@@ -115,5 +115,5 @@ def convert_pdf_to_pdf_ocr():
 
 
 # Pour dev local uniquement
-if __name__ == '__main__':
-    app.run(debug=True)
+#if __name__ == '__main__':
+#   app.run(debug=True)
