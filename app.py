@@ -7,9 +7,10 @@ import fitz  # PyMuPDF
 import os
 
 app = Flask(__name__)
-
 UPLOAD_FOLDER = 'uploads'
+EXPORT_FOLDER = 'exports'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(EXPORT_FOLDER, exist_ok=True)
 
 @app.route('/')
 def home():
@@ -27,16 +28,40 @@ def pdf_to_word_ocr_page():
 def pdf_to_pdf_ocr_page():
     return render_template('pdf_to_pdf_ocr.html')
 
-@app.route('/pdf-editor')
-def pdf_editor():
-    return render_template('pdf_editor.html')  # page avec l’éditeur complet
+@app.route('/editor')
+def editor():
+    return render_template("pdf_editor.html")
 
-# Si tu veux gérer une future route pour télécharger les PDF modifiés :
-@app.route('/download', methods=['POST'])
-def download_pdf():
-    # À compléter si tu veux permettre un téléchargement depuis le client
-    # Par exemple, tu peux recevoir un blob, le sauvegarder ici, et le retourner avec `send_file`
-    return "Fonction d'exportation PDF à implémenter"
+@app.route('/upload-pdf', methods=['POST'])
+def upload_pdf():
+    if 'file' not in request.files:
+        return 'Aucun fichier PDF reçu.', 400
+
+    pdf_file = request.files['file']
+    filename = secure_filename(pdf_file.filename)
+    save_path = os.path.join(UPLOAD_FOLDER, filename)
+    pdf_file.save(save_path)
+
+    return {'status': 'ok', 'filename': filename}
+
+@app.route('/export-pdf', methods=['POST'])
+def export_pdf():
+    content = request.json.get("content")
+    if not content:
+        return "Aucune donnée à exporter.", 400
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_font("Arial", size=12)
+    for line in content.split("\n"):
+        pdf.multi_cell(0, 10, line)
+
+    filename = f"exported_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+    output_path = os.path.join(EXPORT_FOLDER, filename)
+    pdf.output(output_path)
+
+    return send_file(output_path, as_attachment=True)
 
 # ==== Traitement ====
 

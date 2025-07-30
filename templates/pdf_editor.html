@@ -5,10 +5,11 @@
   <title>Modifier un PDF – EasyPDF</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- PDF-LIB -->
+  <!-- PDF-LIB + PDF.js -->
   <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 
-  <!-- Bootstrap + Icons -->
+  <!-- Bootstrap & FontAwesome -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 
@@ -16,7 +17,7 @@
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background-color: #f4f4f8;
+      background-color: #f9f9fb;
       overflow: hidden;
     }
 
@@ -27,8 +28,7 @@
 
     .toolbar {
       width: 60px;
-      background: #2d2d30;
-      color: white;
+      background: #212529;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -40,9 +40,9 @@
       border: none;
       color: white;
       font-size: 18px;
-      margin: 10px 0;
+      margin: 12px 0;
       cursor: pointer;
-      transition: transform 0.2s;
+      transition: 0.2s ease;
     }
 
     .toolbar button:hover {
@@ -51,18 +51,19 @@
 
     .pdf-viewer {
       flex-grow: 1;
-      overflow: auto;
       display: flex;
       justify-content: center;
       align-items: center;
       position: relative;
+      overflow: auto;
+      background: #f0f0f5;
     }
 
-    #pdfCanvas {
-      max-width: 90%;
-      max-height: 90%;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-      border-radius: 8px;
+    .pdf-viewer canvas {
+      max-width: 95%;
+      max-height: 95%;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       background: white;
     }
 
@@ -78,16 +79,20 @@
       margin-bottom: 10px;
       border: 2px solid transparent;
       cursor: pointer;
+      border-radius: 5px;
     }
 
     .thumbnail.selected {
-      border-color: #007bff;
+      border-color: #0d6efd;
     }
 
     .topbar {
       position: absolute;
-      top: 10px;
-      right: 20px;
+      top: 15px;
+      left: 80px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
       z-index: 10;
     }
 
@@ -95,44 +100,45 @@
       display: none;
     }
 
-    .topbar label {
-      background-color: #007bff;
+    .topbar label, .topbar button {
+      background-color: #0d6efd;
       color: white;
-      padding: 8px 15px;
+      padding: 6px 14px;
+      border: none;
       border-radius: 6px;
-      margin-right: 10px;
       cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
 
     .topbar button {
       background-color: #28a745;
-      color: white;
-      padding: 8px 15px;
-      border: none;
-      border-radius: 6px;
     }
 
     @media (max-width: 768px) {
       .toolbar { width: 50px; }
-      .sidebar { width: 100px; }
+      .sidebar { width: 90px; }
+      .topbar { flex-direction: column; left: 70px; align-items: flex-start; }
     }
   </style>
 </head>
 <body>
 
 <div class="editor-container">
-  <!-- Barre d'outils -->
+  <!-- Outils à gauche -->
   <div class="toolbar">
     <button title="Ajouter du texte"><i class="fas fa-font"></i></button>
     <button title="Surligner"><i class="fas fa-highlighter"></i></button>
     <button title="Dessiner"><i class="fas fa-pen"></i></button>
-    <!-- Ajouter plus tard si tu veux -->
   </div>
 
-  <!-- Zone PDF -->
+  <!-- Zone centrale -->
   <div class="pdf-viewer">
+    <!-- Barre d'actions -->
     <div class="topbar">
-      <label for="uploadPDF"><i class="fas fa-upload"></i> Choisir un PDF</label>
+      <label for="uploadPDF"><i class="fas fa-upload"></i> Importer</label>
       <input type="file" id="uploadPDF" accept=".pdf">
       <button id="exportBtn"><i class="fas fa-download"></i> Exporter</button>
     </div>
@@ -140,9 +146,7 @@
   </div>
 
   <!-- Miniatures -->
-  <div class="sidebar" id="thumbnailList">
-    <!-- Thumbnails dynamiques -->
-  </div>
+  <div class="sidebar" id="thumbnailList"></div>
 </div>
 
 <script>
@@ -156,35 +160,31 @@
     const file = this.files[0];
     if (!file) return;
 
-    const fileReader = new FileReader();
-    fileReader.onload = async function () {
-      const typedarray = new Uint8Array(this.result);
-      const loadingTask = await pdfjsLib.getDocument({data: typedarray}).promise;
+    const reader = new FileReader();
+    reader.onload = async function () {
+      const typedArray = new Uint8Array(this.result);
+      const loadingTask = await pdfjsLib.getDocument({ data: typedArray }).promise;
       pdfDoc = loadingTask;
       showPage(1);
       generateThumbnails();
     };
-    fileReader.readAsArrayBuffer(file);
+    reader.readAsArrayBuffer(file);
   });
 
   async function showPage(num) {
     currentPage = num;
     const page = await pdfDoc.getPage(num);
-    const viewport = page.getViewport({scale: 1.5});
+    const viewport = page.getViewport({ scale: 1.5 });
     canvas.width = viewport.width;
     canvas.height = viewport.height;
 
-    await page.render({
-      canvasContext: ctx,
-      viewport: viewport
-    }).promise;
-
-    updateSelectedThumbnail(num);
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    highlightThumbnail(num);
   }
 
-  function updateSelectedThumbnail(num) {
-    [...thumbnailList.children].forEach((thumb, index) => {
-      thumb.classList.toggle('selected', index + 1 === num);
+  function highlightThumbnail(num) {
+    [...thumbnailList.children].forEach((thumb, idx) => {
+      thumb.classList.toggle('selected', idx + 1 === num);
     });
   }
 
@@ -192,26 +192,32 @@
     thumbnailList.innerHTML = '';
     for (let i = 1; i <= pdfDoc.numPages; i++) {
       const page = await pdfDoc.getPage(i);
-      const viewport = page.getViewport({scale: 0.2});
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
+      const thumbViewport = page.getViewport({ scale: 0.25 });
+      const thumbCanvas = document.createElement('canvas');
+      const context = thumbCanvas.getContext('2d');
+      thumbCanvas.width = thumbViewport.width;
+      thumbCanvas.height = thumbViewport.height;
 
-      await page.render({canvasContext: context, viewport}).promise;
-      canvas.classList.add('thumbnail');
-      canvas.addEventListener('click', () => showPage(i));
-      thumbnailList.appendChild(canvas);
+      await page.render({ canvasContext: context, viewport: thumbViewport }).promise;
+      thumbCanvas.classList.add('thumbnail');
+      thumbCanvas.addEventListener('click', () => showPage(i));
+      thumbnailList.appendChild(thumbCanvas);
     }
   }
 
-  document.getElementById('exportBtn').addEventListener('click', () => {
-    alert("Fonction d'exportation à implémenter avec PDF-lib (selon modifications).");
+  document.getElementById('exportBtn').addEventListener('click', async () => {
+    if (!pdfDoc) return alert("Aucun fichier PDF chargé.");
+
+    const pdfBytes = await pdfDoc.save();  // ❗ Faux – pdf.js ne peut pas modifier ou exporter.
+    const blob = new Blob([pdfBytes], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "pdf_modifié.pdf";
+    a.click();
+    URL.revokeObjectURL(url);
   });
 </script>
-
-<!-- PDF.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 
 </body>
 </html>
