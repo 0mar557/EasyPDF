@@ -8,7 +8,6 @@ import os
 
 app = Flask(__name__)
 
-# Configuration des chemins
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -16,12 +15,25 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def home():
     return render_template('index.html')
 
+@app.route('/pdf-to-word')
+def pdf_to_word_page():
+    return render_template('pdf_to_word.html')
+
+@app.route('/pdf-to-word-ocr')
+def pdf_to_word_ocr_page():
+    return render_template('pdf_to_word_ocr.html')
+
+@app.route('/pdf-to-pdf-ocr')
+def pdf_to_pdf_ocr_page():
+    return render_template('pdf_to_pdf_ocr.html')
+
+
+# ==== Traitement ====
 
 @app.route('/convert/pdf-to-word', methods=['POST'])
 def convert_pdf_to_word():
-    """Conversion directe PDF → DOCX (texte éditable, pas d'OCR)"""
     if 'file' not in request.files:
-        return "Aucun fichier reçu sous la clé 'file'", 400
+        return "Aucun fichier reçu", 400
 
     file = request.files['file']
     input_path = os.path.join(UPLOAD_FOLDER, file.filename)
@@ -34,14 +46,13 @@ def convert_pdf_to_word():
         cv.close()
         return send_file(output_path, as_attachment=True)
     except Exception as e:
-        return f"Erreur lors de la conversion PDF → Word : {str(e)}", 500
+        return f"Erreur PDF → Word : {str(e)}", 500
 
 
 @app.route('/convert/pdf-to-word-ocr', methods=['POST'])
 def convert_pdf_to_word_ocr():
-    """OCR : PDF image → texte brut → Word éditable"""
     if 'file' not in request.files:
-        return "Aucun fichier reçu sous la clé 'file'", 400
+        return "Aucun fichier reçu", 400
 
     file = request.files['file']
     input_path = os.path.join(UPLOAD_FOLDER, file.filename)
@@ -49,7 +60,6 @@ def convert_pdf_to_word_ocr():
     file.save(input_path)
 
     try:
-        # PAS besoin de poppler_path ici : il est dans PATH via Docker
         images = convert_from_path(input_path)
         doc = Document()
 
@@ -68,9 +78,8 @@ def convert_pdf_to_word_ocr():
 
 @app.route('/convert/pdf-to-pdf-ocr', methods=['POST'])
 def convert_pdf_to_pdf_ocr():
-    """OCR avec mise en page conservée : PDF image → PDF avec texte sélectionnable"""
     if 'file' not in request.files:
-        return "Aucun fichier reçu sous la clé 'file'", 400
+        return "Aucun fichier reçu", 400
 
     file = request.files['file']
     input_path = os.path.join(UPLOAD_FOLDER, file.filename)
@@ -99,9 +108,6 @@ def convert_pdf_to_pdf_ocr():
         return send_file(output_path, as_attachment=True)
 
     except Exception as e:
-        return f"Erreur OCR avec mise en page : {str(e)}", 500
-
-
-# ⚠️ Ne pas exécuter app.run() sur Railway, c'est gunicorn qui démarre l'app
-# if __name__ == '__main__':
-#     app.run(debug=True)
+        return f"Erreur OCR vers PDF : {str(e)}", 500
+if __name__ == '__main__':
+    app.run(debug=True, port=8000)
