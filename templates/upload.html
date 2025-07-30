@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Uploader un PDF – EasyPDF</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      background: #f7f9fc;
+      font-family: 'Segoe UI', sans-serif;
+      text-align: center;
+      padding: 100px;
+    }
+
+    h1 {
+      color: #2c3e50;
+    }
+
+    .upload-box {
+      margin-top: 40px;
+      padding: 30px;
+      border: 2px dashed #3498db;
+      border-radius: 10px;
+      display: inline-block;
+      background: white;
+    }
+
+    input[type="file"] {
+      margin-top: 20px;
+    }
+
+    .btn {
+      background-color: #3498db;
+      border: none;
+      padding: 12px 20px;
+      color: white;
+      font-weight: bold;
+      border-radius: 8px;
+      margin-top: 20px;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      background-color: #2980b9;
+    }
+  </style>
+</head>
+<body>
+  <h1>Modifier un PDF</h1>
+  <p>Sélectionnez un fichier PDF à modifier :</p>
+
+  <form action="/upload-pdf" method="POST" enctype="multipart/form-data" class="upload-box">
+    <input type="file" name="file" accept=".pdf" required><br>
+    <button class="btn" type="submit">Envoyer et modifier</button>
+  </form>
+</body>
+</html>

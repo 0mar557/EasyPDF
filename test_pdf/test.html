@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>PDF Export Test</title>
+  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+</head>
+<body>
+
+<h1>Test Export PDF (sans CSS)</h1>
+<input type="file" id="pdfInput" accept="application/pdf">
+<button id="exportBtn">Exporter</button>
+
+<script>
+  let pdfBytesOriginal = null;
+
+  document.getElementById('pdfInput').addEventListener('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      pdfBytesOriginal = new Uint8Array(e.target.result);
+      alert("PDF chargé !");
+    };
+    reader.readAsArrayBuffer(file);  // ✅ le plus important
+  });
+
+  document.getElementById('exportBtn').addEventListener('click', async function () {
+    if (!pdfBytesOriginal) {
+      alert("Aucun PDF chargé !");
+      return;
+    }
+
+    try {
+      const pdfDoc = await PDFLib.PDFDocument.load(pdfBytesOriginal);
+      const pdfBytes = await pdfDoc.save();
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'document_exporte.pdf';
+      a.click();
+    } catch (e) {
+      alert("Erreur lors de l'exportation : " + e.message);
+    }
+  });
+</script>
+
+</body>
+</html>

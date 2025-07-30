@@ -1,69 +1,74 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Test Editeur PDF</title>
-  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+  <title>Éditeur PDF – EasyPDF</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- PDF.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+  <!-- PDF-lib -->
+  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
 </head>
 <body>
 
-  <h2>Test PDF brut</h2>
+  <h1>Éditeur de PDF Simple</h1>
 
-  <input type="file" id="uploadPDF" accept="application/pdf">
-  <button id="exportBtn">Exporter</button>
-  <br><br>
+  <input type="file" id="uploadPDF" accept=".pdf">
+  <button id="exportBtn">Exporter PDF</button>
+
   <canvas id="pdfCanvas"></canvas>
 
   <script>
+    let pdfDoc = null;
+    let pdfLibDoc = null;
+    let currentPage = 1;
     const canvas = document.getElementById('pdfCanvas');
     const ctx = canvas.getContext('2d');
-    const uploadInput = document.getElementById('uploadPDF');
-    const exportBtn = document.getElementById('exportBtn');
 
-    let pdfDoc = null;
-    let originalPdfBytes = null;
-
-    uploadInput.addEventListener('change', async function () {
+    // Upload
+    document.getElementById('uploadPDF').addEventListener('change', async function () {
       const file = this.files[0];
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = async function (event) {
-        try {
-          originalPdfBytes = new Uint8Array(event.target.result); // correct: Uint8Array
-          const loadingTask = pdfjsLib.getDocument({ data: originalPdfBytes });
-          pdfDoc = await loadingTask.promise;
+      reader.onload = async function () {
+        const typedarray = new Uint8Array(this.result);
 
-          const page = await pdfDoc.getPage(1);
-          const viewport = page.getViewport({ scale: 1.5 });
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-          await page.render({ canvasContext: ctx, viewport }).promise;
-        } catch (err) {
-          alert("Erreur lors du chargement du PDF : " + err.message);
+        // PDF-lib pour modifications
+        try {
+          pdfLibDoc = await PDFLib.PDFDocument.load(typedarray);
+          alert("PDF-lib chargé avec succès !");
+        } catch (e) {
+          alert("Erreur PDF-lib : " + e.message);
+          return;
         }
+
+        // PDF.js pour aperçu
+        const loadingTask = await pdfjsLib.getDocument({ data: typedarray }).promise;
+        pdfDoc = loadingTask;
+        const page = await pdfDoc.getPage(1);
+        const viewport = page.getViewport({ scale: 1.5 });
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: ctx, viewport }).promise;
       };
-      reader.readAsArrayBuffer(file); // <- important : pas readAsDataURL
+
+      reader.readAsArrayBuffer(file);
     });
 
-    exportBtn.addEventListener('click', async () => {
-      if (!originalPdfBytes) {
+    // Export
+    document.getElementById('exportBtn').addEventListener('click', async () => {
+      if (!pdfLibDoc) {
         alert("Aucun PDF chargé !");
         return;
       }
 
-      try {
-        const pdfDocLib = await PDFLib.PDFDocument.load(originalPdfBytes); // parse OK
-        const pdfBytes = await pdfDocLib.save(); // export
-        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'document_modifie.pdf';
-        a.click();
-      } catch (err) {
-        alert("Erreur lors de l'exportation : " + err.message);
-      }
+      const pdfBytes = await pdfLibDoc.save();
+      const blob = new Blob([pdfBytes], { type: "application/pdf" });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = "exported.pdf";
+      link.click();
     });
   </script>
 
